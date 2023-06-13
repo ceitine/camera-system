@@ -1,0 +1,138 @@
+﻿@using Sandbox;
+@using Sandbox.UI;
+
+@namespace TestGame
+@inherits Panel
+
+<style>
+	$dark-background: rgba(23, 27, 31, 1);
+	$light-border: rgba(50, 50, 50, 1);
+	$text-selected: rgba(216, 204, 121, 1);
+
+	Frame {
+		border: 1px $light-border;
+		background-color: $dark-background;
+		padding-top: 45px;
+		align-items: flex-start;
+		flex-grow: 1;
+		font-family: 'Retro-Gaming';
+		text-shadow: 3px 3px 0px black;
+		color: white;
+		box-shadow: 10px 10px 0px rgba(black, 0.5);
+		transition: transform 0.5s ease-in-out;
+
+		&:intro {
+			transform: scale(0);
+		}
+
+		&:outro {
+			transform: scale(0);
+		}
+
+		.header {
+            position: absolute;
+            width: 100%;
+            height: 35px;
+            border-bottom: 1px $light-border;
+            background-color: rgba(110, 10, 10, 1);
+
+            .title {
+                margin: 4px;
+                font-size: 18px;
+				pointer-events: none;
+            }
+
+			.button {
+				position: absolute;
+				right: 7px;
+				top: 7px;
+				width: 20px;
+				aspect-ratio: 1;
+				background-image: url(ui/ui_close.png);
+				background-position: center;
+				background-repeat: no-repeat;
+				background-size: 100%;
+				background-image-tint: rgba(150, 150, 150, 1);
+				image-rendering: point;
+
+				&:hover {
+					background-image-tint: rgba(255, 255, 255, 1);
+				}
+			}
+        }
+	}
+</style>
+
+<root>
+	<panel class="header">
+		<label class="title">@Title</label>
+
+		@if ( ShowCloseButton )
+		{
+			<image class="button" @onclick=@(() => {
+				Parent.Delete();
+				Parent = null;
+			}) />
+		}
+	</panel>
+</root>
+
+@code {
+	/// <summary>
+	/// The title of this frame.
+	/// </summary>
+	public string Title { get; set; }
+
+	/// <summary>
+	/// Is this frame draggable?
+	/// </summary>
+	public bool Draggable { get; set; }
+
+	/// <summary>
+	/// Should the frame have a close button?
+	/// </summary>
+	public bool ShowCloseButton { get; set; }
+
+	private Vector2? dragging;
+
+	public override void Tick()
+	{
+		if ( dragging == null )
+			return;
+
+		// Get current Left and Top values of the Frame.
+		var computedPosition = new Vector2( ComputedStyle.Left?.GetPixels( 0f ) ?? 0f, ComputedStyle.Top?.GetPixels( 0f ) ?? 0f );
+
+		// Get actual screenspace position of the Frame.
+		var rectPosition = Box.Rect.Position - computedPosition * ScaleFromScreen;
+
+		// Calculate the actual position it should be set to.
+		var targetPosition = Mouse.Position - rectPosition - dragging.Value;
+
+		// Set position.
+		Style.Left = targetPosition.x;
+		Style.Top = targetPosition.y;
+	}
+
+	protected override void OnMouseDown( MousePanelEvent e )
+	{
+		base.OnMouseDown( e );
+
+		// Start dragging if draggable and targeting the header.
+		if ( Draggable && dragging == null && e.Target.HasClass( "header" ) )
+			dragging = MousePosition;
+	}
+
+	protected override void OnMouseUp( MousePanelEvent e )
+	{
+		base.OnMouseUp( e );
+
+		// Stop dragging.
+		dragging = null;
+	}
+
+	protected override int BuildHash()
+	{
+		return HashCode.Combine( Title, Draggable, ShowCloseButton );
+	}
+}

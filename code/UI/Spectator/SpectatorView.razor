@@ -1,0 +1,186 @@
+﻿@using Sandbox;
+@using Sandbox.UI;
+
+@namespace TestGame
+@inherits RootPanel
+@attribute [StyleSheet]
+
+@if ( Game.LocalPawn is not Spectator pawn || cctv == null )
+	return;
+
+<root>
+	<panel class="side-list">
+		@*Information and settings.*@
+		<frame class="container information" title="INFORMATION" style="height: 20%;">
+			<image class="avatar" texture="avatarbig:@(Game.LocalClient.SteamId)" />
+			<label>@Game.LocalClient.Name</label>
+		</frame>
+
+		@*List of all CCTV Cameras.*@
+		<frame class="container cameras" title="MONITORING POINT" style="height: 40%;">
+			<label class="count">@CCTV.All.Count CAMERAS TOTAL:</label>
+
+			<panel class="list">
+				@foreach ( var camera in CCTV.All )
+				{
+					<panel class="camera @(camera == cctv ? "current" : "")" onclick=@(() => Spectator.SwapCamera( camera.NetworkIdent ))>
+						<panel class="dash" />
+						<label>@camera.Title.ToUpper()</label>
+					</panel>
+				}
+			</panel>
+		</frame>
+		
+		@*Chatbox and TTS/Soundboard buttons.*@
+		<frame class="container chat" title="CHAT - @(Game.Clients.Where( cl => cl.Pawn is Spectator ).Count()) ONLINE">
+			<panel class="inner">
+				<panel class="messages">
+					<chat />
+				</panel>
+
+				<panel class="input-container">
+					<TextInput class="chat-input" ghost="Enter your message here!" useeffects=false @ref=chatInput onsubmit=@(() => {
+						TextInput.Active = null;
+						
+						if ( chatInput == null || string.IsNullOrEmpty( chatInput.Text ) || chatInput.Text.Length > Chat.MAX_CHARACTERS ) 
+							return;
+
+						Chat.RequestMessage( chatInput.Text );
+						chatInput.Text = "";
+					}) />
+			
+					<panel class="buttons">
+						@{
+							var length = chatInput.Text.Length;
+							<label class="chars @(length > Chat.MAX_CHARACTERS ? "max" : "")">@(length) / @(Chat.MAX_CHARACTERS)</label>
+						}
+
+						<panel class="button" style="background-image: url(ui/ui_soundboard.png);" />
+						<panel class="button" style="background-image: url(ui/ui_tts.png);" @onclick=@(() => AddChild<TTSPopup>()) />
+					</panel>
+				</panel>
+			</panel>
+		</frame>
+	</panel>
+	
+	@*Drawing the current CCTV Camera.*@
+	<panel class="camera">
+		<img class="output @(cctv.Nightmode ? "nightmode" : "")" @ref=cameraOutput />
+		<panel class="overlay @(cctv.Nightmode ? "nightmode" : "")" />
+		<panel class="text" style="left: 40px; top: 40px;">@cctv.Title.ToUpper()</panel>
+		<panel class="text" style="right: 40px; top: 40px; align-items: center;">
+			<panel class="flicker" /> 
+			LIVE
+		</panel>
+
+		@if ( cctv.Nightmode )
+		{
+			<panel class="text" style="left: 40px; bottom: 40px; flex-direction: column;">
+				<span>NIGHTMODE</span>
+				<span style="font-size: 16px;">'TAB' TO TOGGLE</span>
+			</panel>
+		}
+
+		<userinformation class="information" />
+	</panel>
+
+	@*Darken view on right conditions.*@
+	<panel class="darken @((Popup.Instance?.IsValid ?? false) ? "active" : "")" />
+
+	@*The cursor used for everything.*@
+	<panel class="cursor" @ref=cursor />
+</root>
+
+@code {
+	public static SpectatorView Instance { get; private set; }
+	public static Ray Ray { get; private set; }
+
+	private Spectator pawn => Game.LocalPawn as Spectator;
+	private CCTV cctv => pawn?.CCTV;
+
+	private Image cameraOutput;
+	private TextInput chatInput;
+	private Panel cursor;
+
+	public SpectatorView()
+	{
+		Instance = this;
+	}
+
+	[Event.Client.BuildInput]
+	private void BuildInput()
+	{
+		// Toggle chat.
+		if ( Input.Released( "chat" ) && !chatInput.HasFocus )
+			TextInput.Active = chatInput;
+	}
+
+	[Event.Client.Frame]
+	private void Frame()
+	{
+		// Disable depending on DevCamera.
+		var devCamera = Game.LocalClient?.Components.Get<DevCamera>()?.Enabled ?? false;
+		SetClass( "disabled", devCamera );
+
+		// Get Camera's ray.
+		var rayPos = Instance?.cameraOutput?.MousePosition ?? 0f;
+		var size = Instance?.cameraOutput?.Box.Rect.Size ?? Vector2.One;
+		Ray = cctv?.Capturer?.Camera.GetRay( rayPos, size ) ?? default;
+
+		// Move cursor.
+		if ( cursor == null )
+			return;
+
+		var pos = Mouse.Position / Screen.Size;
+		cursor.Style.Left = Length.Fraction( pos.x );
+		cursor.Style.Top = Length.Fraction( pos.y );
+	}
+
+	protected override void OnClick( MousePanelEvent e )
+	{
+		TextInput.Active = e.Target is TextInput input
+			? input
+			: null;
+
+		if ( e.Target is not SingleSelect.Collapse collapse && SingleSelect.Collapsed?.Select != e.Target )
+		{
+			SingleSelect.Collapsed?.Delete();
+			SingleSelect.Collapsed = null;
+		}
+
+		base.OnClick( e );
+	}
+
+	public override Vector2 GetTransformPosition( Vector2 pos )
+	{
+		// This is actually not needed right now because we are drawing our own cursor.
+
+		// This value is taken from the shader, it should be in the RenderHook instead as an attribute.
+		/*const float curvature = 7f;
+
+		var fraction = pos / Screen.Size;
+		var curvePos = fraction * 2f - 1f;
+		var offset = new Vector2(curvePos.y, curvePos.x) / curvature;
+
+		curvePos += curvePos * offset * offset;
+		curvePos = curvePos * 0.5f + 0.5f;*/
+
+		return pos;
+	}
+
+	protected override void OnAfterTreeRender( bool firstTime )
+	{
+		base.OnAfterTreeRender( firstTime );
+
+		if ( firstTime )
+			SkipTransitions();
+
+		if ( cameraOutput != null )
+			cameraOutput.Texture = cctv?.Capturer.RenderTarget;
+	}
+	
+	protected override int BuildHash()
+	{
+		return HashCode.Combine( cctv?.NetworkIdent, cctv?.Nightmode, chatInput?.HasFocus, chatInput?.Text, Popup.Instance?.IsValid, Game.Clients.Count );
+	}
+}

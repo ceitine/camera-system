@@ -1,0 +1,80 @@
+﻿@namespace TestGame
+@inherits Popup
+
+<style>
+	$dark-background: rgba(23, 27, 31, 1);
+	$light-border: rgba(50, 50, 50, 1);
+	$text-selected: rgba(216, 204, 121, 1);
+
+	TTSPopup {
+		Frame {
+			width: 600px;
+			padding: 10px;
+			padding-top: 45px;
+			flex-direction: column;
+
+			.container {
+				padding: 5px;
+				width: 100%;
+				flex-direction: column;
+			}
+
+			TextInput {
+				width: 100%;
+				height: 45px;
+				margin-bottom: 10px;
+
+				label {
+					right: 10px;
+				}
+			}
+
+			SingleSelect {
+				height: 45px;
+			}
+
+			.send-button {
+				width: 100%;
+				height: 60px;
+				font-size: 24px;
+				z-index: -1;
+			}
+		}
+	}
+</style>
+
+<root>
+	<frame title="SEND A TTS MESSAGE" showclosebutton=true draggable=true>
+		<panel class="container">
+			<TextInput overflow=true ghost="MESSAGE" @ref=input />
+			<SingleSelect 
+				Options=@(cameras)
+				Current=@index
+				@ref=choice 
+			/>
+		</panel>
+
+		<ClickPanel class="send-button" text="SEND" @onclick=@( () => {
+			if ( Game.LocalPawn is not Spectator spectator || input.Text == string.Empty )
+				return;
+			
+			var camera = CCTV.All.FirstOrDefault( c => c.Title == choice.Options[choice.Current] );
+			Spectator.SoundRequest( camera.NetworkIdent, CCTV.SoundType.TTS, input.Text );
+			Delete();
+		}) />
+	</frame>
+</root>
+
+
+@code {
+	private List<string> cameras = CCTV.All.Select( c => c.Title ).ToList();
+	private int index;
+
+	private TextInput input;
+	private SingleSelect choice;
+
+	public TTSPopup()
+	{
+		index = cameras.IndexOf( (Game.LocalPawn as Spectator)?.CCTV.Title ?? cameras.FirstOrDefault() );
+	}
+}

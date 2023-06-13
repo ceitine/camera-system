@@ -1,0 +1,74 @@
+﻿@using Sandbox;
+@using Sandbox.UI;
+
+@namespace TestGame
+@inherits Panel
+
+<style>
+	UserInformation {
+		position: absolute;
+		left: 0px;
+		top: 0px;
+		height: 100px;
+		width: 90px;
+		flex-direction: column;
+
+		&.visible {
+			opacity: 1;
+		}
+	}
+</style>
+
+<root class="@(hovered == null || !hovered.IsValid ? "visible" : "")">
+	@if ( hovered == null || !hovered.IsValid )
+		return;
+
+	<label>@hovered.Client.Name</label>
+</root>
+
+@code {
+	Player hovered;
+
+	public override void Tick()
+	{
+		if ( Game.LocalPawn is not Spectator pawn )
+			return;
+
+		// Calculate position on screen.
+		if ( hovered != null && hovered.IsValid )
+		{
+			var camera = pawn.CCTV?.Capturer?.Camera;
+			var targetPosition = camera?.ToScreen( hovered.Position ) ?? Vector2.Zero;
+
+			var padding = new Vector2( 
+				Parent?.ComputedStyle?.PaddingLeft?.GetPixels( 0f ) ?? 0f,
+				Parent?.ComputedStyle?.PaddingTop?.GetPixels( 0f ) ?? 0f );
+			var size = Parent.Box.Rect.Size;
+			var remapped = new Vector2(
+				targetPosition.x.Remap( 0f, camera.Size.x, padding.x, size.x - padding.x, false ),
+				targetPosition.y.Remap( 0f, camera.Size.y, padding.y, size.y - padding.y, false ) );
+			var pos = remapped / size;
+
+			Style.Left = Length.Fraction( pos.x );
+			Style.Top = Length.Fraction( pos.y );
+		}
+
+		// Show hovered player.
+		var tr = Trace.Ray( pawn.MouseRay, 100000f )
+			.Ignore( pawn.CCTV )
+			.Run();
+
+		if ( tr.Entity is not Player player )
+		{
+			hovered = null;
+			return;
+		}
+
+		hovered = player;
+	}
+
+	protected override int BuildHash()
+	{
+		return HashCode.Combine( hovered );
+	}
+}

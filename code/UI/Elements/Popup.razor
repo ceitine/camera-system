@@ -1,0 +1,27 @@
+﻿@using Sandbox;
+@using Sandbox.UI;
+
+@namespace TestGame
+@inherits Panel
+
+@code {
+	public static Popup Instance { get; private set; }
+
+	public Popup()
+	{
+		Instance?.Delete();
+		Instance = this;
+
+		Style.Position = PositionMode.Absolute;
+		Style.ZIndex = 3;
+	}
+
+	public override void FinalLayout( Vector2 offset )
+	{
+		var center = (Screen.Size / 2f - Box.Rect.Size / 2f) * ScaleFromScreen;
+		Style.Left = center.x;
+		Style.Top = center.y;
+
+		base.FinalLayout( offset );
+	}
+}

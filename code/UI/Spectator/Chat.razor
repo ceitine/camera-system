@@ -1,0 +1,273 @@
+﻿@using Sandbox;
+@using Sandbox.UI;
+
+@namespace TestGame
+@inherits Panel
+
+<style>
+	$dark-background: rgba(23, 27, 31, 1);
+	$light-border: rgba(50, 50, 50, 1);
+	$text-selected: rgba(216, 204, 121, 1);
+
+	Chat {
+		width: 100%;
+		height: 100%;
+		flex-direction: column;
+		overflow: scroll;
+
+		.object {
+			margin-bottom: 0px;
+			flex-shrink: 0;
+			border-bottom: 1px $light-border;
+		}
+
+		.message {
+			min-height: 40px;
+			flex-direction: column;
+			font-size: 18px;
+			padding: 5px;
+			color: darken(white, 30%);
+
+			.user {
+				height: 24px;
+				flex-direction: row;
+				font-size: 20px;
+				align-items: center;
+				margin-bottom: 5px;
+				color: white;
+				
+				img {
+					border: 1px $light-border;
+					box-shadow: 4px 4px 0px rgba(black, 0.5);
+				}
+
+				.camera {
+					font-size: 15px;
+					margin-bottom: 20px;
+					margin-left: -10px;
+					color: lighten($text-selected, 20%);
+				}
+			}
+		}
+
+		img {
+			margin-right: 5px;
+			width: 24px;
+			aspect-ratio: 1;
+			background-size: 100%;
+			background-position: center;
+			background-repeat: no-repeat;	
+		}
+
+		.tts {
+			min-height: 40px;
+			font-size: 18px;
+			color: darken(white, 30%);
+			padding: 5px;
+
+			.speaker {
+				position: absolute;
+				right: 15px;
+				top: 15px;
+				background-image: url(ui/ui_speaker.png);
+				animation-name: effect;
+				animation-duration: 2s;
+				animation-timing-function: ease-in-out;
+			}
+
+			.user {
+				height: 24px;
+				flex-direction: row;
+				font-size: 20px;
+				align-items: center;
+				margin-bottom: 5px;
+				color: white;
+
+				img {
+					border: 1px $light-border;
+					box-shadow: 4px 4px 0px rgba(black, 0.5);
+				}
+
+				.camera {
+					font-size: 15px;
+					margin-bottom: 16px;
+					margin-left: -10px;
+					color: lighten($text-selected, 20%);
+				}
+			}
+			
+			.inner {
+				width: 100%;
+				height: 100%;
+				background-color: darken($dark-background, 10%);
+				padding: 5px;
+				border-image: url(ui/ui_border.png);
+				flex-direction: column;
+			}
+		}
+	}
+</style>
+
+<root>
+	@foreach( var data in messages )
+	{
+		var inputs = data.inputs;
+		switch ( data.type )
+		{
+			case MessageType.Default:
+			{
+				<panel class="message object">
+					<panel class="user">
+						<img texture="avatar:@(inputs[0])" />
+						<label>@(inputs[1])</label>
+						<label class="camera">@($"@ {inputs[2].ToUpper()}")</label>
+					</panel>
+
+					<label>@(inputs[3])</label>
+				</panel>
+
+				break;
+			}
+
+			case MessageType.TTS:
+			{
+				<panel class="tts object">
+					<panel class="inner">
+						<panel class="user">
+							<img texture="avatar:@(inputs[0])" />
+							<label>@(inputs[1])</label>
+							<label class="camera">@($"@ {inputs[2].ToUpper()}")</label>
+						</panel>
+
+						<label>@(inputs[3])</label>
+					</panel>
+
+					<img class="speaker" />
+				</panel>
+
+				break;
+			}
+		}
+	}
+</root>
+
+@code {
+	/// <summary>
+	/// Maximum amount of messages at one time.
+	/// </summary>
+	public const int MAX_MESSAGES = 20;
+
+	/// <summary>
+	/// Maximum amount of characters in a message.
+	/// </summary>
+	public const int MAX_CHARACTERS = 128;
+
+	/// <summary>
+	/// Static reference to the Chat.
+	/// </summary>
+	public static Chat Instance { get; private set; }
+
+	/// <summary>
+	/// Type of message, used for networking.
+	/// </summary>
+	public enum MessageType
+	{
+		Default,
+		TTS
+	}
+
+	struct MessageData
+	{
+		public string[] inputs;
+		public MessageType type;
+	}
+
+	private static List<MessageData> messages = new();
+	private Guid refreshGuid;
+
+	public Chat()
+	{
+		Instance = this;
+		PreferScrollToBottom = true;
+	}
+
+	public void Append( MessageType type, params string[] inputs )
+	{
+		// Delete oldest message.
+		if ( messages.Count >= MAX_MESSAGES )
+		{
+			var oldest = messages.FirstOrDefault();
+			messages.Remove( oldest );
+		}
+
+		// Add new data to messages.
+		var data = new MessageData
+		{
+			type = type,
+			inputs = inputs
+		};
+
+		messages.Add( data );
+		refreshGuid = Guid.NewGuid();
+	}
+
+	protected override int BuildHash()
+	{
+		return refreshGuid.GetHashCode();
+	}
+
+	/// <summary>
+	/// Send a message to a To targets Chat.
+	/// </summary>
+	/// <param name="to"></param>
+	/// <param name="type"></param>
+	/// <param name="inputs"></param>
+	public static void Send( To to, MessageType type, params string[] inputs )
+	{
+		Game.AssertServer();
+
+		// Write all data into a MemoryStream.
+		using var stream = new MemoryStream();
+		using var writer = new BinaryWriter( stream );
+
+		writer.Write( (int)type );
+		writer.Write( inputs.Length );
+		foreach ( var input in inputs )
+			writer.Write( input );
+
+		// Call ClientRPC.
+		Chat.SendToClient( stream.ToArray() );
+	}
+
+	[ConCmd.Server]
+	public static void RequestMessage( string input )
+	{
+		var cl = ConsoleSystem.Caller;
+		if ( cl.Pawn is not Spectator pawn || input.Length > MAX_CHARACTERS )
+			return;
+
+		Chat.Send( Spectator.To, MessageType.Default, $"{cl.SteamId}", $"{cl.Name}", $"{pawn.CCTV.Title}", $"{input}" );
+	}
+
+	/// <summary>
+	/// Sends a message to a client's chat.
+	/// </summary>
+	/// <param name="data"></param>
+	[ClientRpc]
+	public static void SendToClient( byte[] data )
+	{
+		// Read all data from the MemoryStream.
+		using var stream = new MemoryStream( data );
+		using var reader = new BinaryReader( stream );
+
+		var type = (Chat.MessageType)reader.ReadInt32();
+
+		var paramCount = reader.ReadInt32();
+		var param = new string[paramCount];
+		for ( int i = 0; i < param.Length; i++ )
+			param[i] = reader.ReadString();
+
+		// Append to chat.
+		Chat.Instance?.Append( type, param );
+	}
+}

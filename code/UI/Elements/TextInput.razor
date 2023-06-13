@@ -1,0 +1,92 @@
+﻿@using Sandbox;
+@using Sandbox.UI;
+
+@namespace TestGame
+@inherits TextEntry
+
+<style>
+	$dark-background: rgba(23, 27, 31, 1);
+	$light-border: rgba(50, 50, 50, 1);
+	$text-selected: rgba(216, 204, 121, 1);
+
+	TextInput {
+		border: 2px $light-border;
+		background-color: darken($dark-background, 80%);
+		font-size: 20px;
+		align-items: center;
+		padding: 5px;
+		font-family: 'Retro-Gaming';
+		text-shadow: 3px 3px 0px black;
+		color: white;
+		box-shadow: 0px 4px 0px rgba(black, 0.5);
+
+		.ghost {
+            position: absolute;
+			left: 5px;
+			top: 5px;
+            color: rgba(white, 0.5);
+        }
+
+		label {
+			pointer-events: none;
+		}
+
+		&.enabled {
+			border: 2px lighten($light-border, 20%);
+			background-color: darken($dark-background, 40%);
+		}
+	}
+</style>
+
+<root class="@(Enabled ? "enabled" : "")" style="@(Overflow ? "text-overflow: clip;" : "")">
+	@if ( Text == string.Empty && Ghost != string.Empty )
+	{
+		<label class="ghost">@Ghost</label>
+	}
+</root>
+
+@code {
+	/// <summary>
+	/// The TextInput that is currently being used.
+	/// </summary>
+	public static TextInput Active { get; set; }
+
+	/// <summary>
+	/// Text that is displayed when this TextInput is empty.
+	/// </summary>
+	public string Ghost { get; set; }
+
+	/// <summary>
+	/// Is this TextInput currently being used?
+	/// </summary>
+	public bool Enabled => Active == this;
+
+	/// <summary>
+	/// Should the TextInput overflow instead of making newlines?
+	/// </summary>
+	public bool Overflow { get; set; }
+
+	/// <summary>
+	/// Should the TextInput use any effects?
+	/// </summary>
+	public bool UseEffects { get; set; } = true;
+
+	public override void Tick()
+	{
+		if ( Enabled )
+		{
+			if ( !AcceptsFocus )
+			{
+				AcceptsFocus = true;
+				Focus();
+			}
+		}
+		else 
+			AcceptsFocus = false;
+	}
+
+	protected override int BuildHash()
+	{
+		return HashCode.Combine( Text, HasHovered, Enabled );
+	}
+}

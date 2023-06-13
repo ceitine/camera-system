@@ -1,0 +1,98 @@
+﻿@using Sandbox;
+@using Sandbox.UI;
+
+@namespace TestGame
+@inherits Panel
+
+<style>
+	$dark-background: rgba(23, 27, 31, 1);
+	$light-border: rgba(50, 50, 50, 1);
+	$text-selected: rgba(216, 204, 121, 1);
+
+	ClickPanel {
+		padding: 4px;
+
+		.border {
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			transition: border 0.5s ease-in-out;
+			pointer-events: none;
+			border: 0px rgba(red, 0);
+
+			&.hovered {
+				border: 2px red;
+			}
+
+			&.down {
+				top: 4px;
+			}
+		}
+		
+		.inner {
+			width: 100%;
+			height: 100%;
+			border: 2px $light-border;
+			background-color: lighten($dark-background, 25%);
+			align-items: center;
+			justify-content: center;
+			padding: 5px;
+			font-family: 'Retro-Gaming';
+			text-shadow: 3px 3px 0px black;
+			color: white;
+			pointer-events: none;
+			transition: border 0.25s ease-in-out, background-color 0.25s ease-in-out;
+			box-shadow: 0px 4px 0px rgba(black, 0.5);
+
+			&.hovered {
+				border: 2px darken($light-border, 10%);
+				background-color: darken($dark-background, 50%);
+			}
+
+			&.down {
+				top: 4px;
+				box-shadow: none;
+			}
+		}
+	}
+</style>
+
+<root>
+	<panel class="border @(HasHovered ? "hovered" : "") @(Down ? "down" : "")" />
+	<panel class="inner @(HasHovered ? "hovered" : "") @(Down ? "down" : "")">
+		<label>@Text</label>
+	</panel>
+</root>
+
+@code {
+	/// <summary>
+	/// The text that is displayed on this button.
+	/// </summary>
+	public string Text { get; set; }
+
+	/// <summary>
+	/// Is the ClickPanel held down?
+	/// </summary>
+	public bool Down { get; private set; }
+
+	protected override void OnMouseDown( MousePanelEvent e )
+	{
+		base.OnMouseDown( e );
+
+		if ( e.Button == "mouseleft" )
+			Down = true;
+	}
+
+	protected override void OnMouseUp( MousePanelEvent e )
+	{
+		base.OnMouseUp( e );
+
+		if ( e.Button == "mouseleft" )
+			Down = false;
+	}
+
+	protected override int BuildHash()
+	{
+		return HashCode.Combine( HasHovered );
+	}
+}

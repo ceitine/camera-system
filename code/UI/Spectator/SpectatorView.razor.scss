@@ -1,0 +1,316 @@
+﻿$dark-background: rgba(23, 27, 31, 1);
+$light-border: rgba(50, 50, 50, 1);
+$text-selected: rgba(216, 204, 121, 1);
+
+@keyframes flicker {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes effect {
+    0% {
+        transform: scale(0.8) rotate(0deg);
+    }
+
+    25% {
+        transform: scale(1.1) rotate(30deg);
+    }
+
+    50% {
+        transform: scale(0.8) rotate(-30deg);
+    }
+
+    75% {
+        transform: scale(1.1) rotate(30deg);
+    }
+
+    100% {
+        transform: scale(0.8) rotate(0deg);
+    }
+}
+
+SpectatorView {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: all;
+    flex-direction: row;
+    background-color: rgba(25, 25, 25, 1);
+    font-family: 'Retro-Gaming';
+    text-shadow: 3px 3px 0px black;
+    color: white;
+    align-items: flex-start;
+
+    .side-list {
+        height: 100%;
+        padding: 20px;
+        flex-direction: column;
+        width: 20%;
+        flex-shrink: 0;
+        flex-grow: 0;
+
+        .container {
+            width: 100%;
+            height: 100%;
+            margin-bottom: 20px;
+
+            &:last-child {
+                margin-bottom: 0px;
+            }
+        }
+
+        .information {
+            padding: 10px;
+            font-size: 18px;
+            color: rgba(205, 205, 205, 1);
+
+            .header {
+                display: none;
+            }
+
+            .avatar {
+                background-size: 100%;
+                background-position: center;
+                background-repeat: no-repeat;
+                width: 60px;
+                aspect-ratio: 1;
+                border: 1px $light-border;
+                box-shadow: 5px 5px 0px rgba(black, 0.5);
+                margin-right: 10px;
+            }
+        }
+
+        .cameras {
+            width: 100%;
+            flex-direction: column;
+            padding-left: 15px;
+            padding-bottom: 10px;
+
+            .count {
+                color: rgba(180, 180, 180, 1);
+                font-size: 18px;
+                padding-bottom: 5px;
+            }
+
+            .list {
+                max-height: 100%;
+                width: 100%;
+                flex-direction: column;
+                overflow: scroll;
+            }
+
+            .camera {
+                width: 100%;
+                height: 30px;
+                flex-grow: 0;
+                font-size: 20px;
+                align-items: center;
+                justify-content: flex-start;
+                border-left: 2px $light-border;
+
+                .dash {
+                    position: absolute;
+                    top: 50%;
+                    height: 2px;
+                    width: 8px;
+                    background-color: $light-border;
+                }
+
+                &:hover {
+                    background-color: lighten($dark-background, 35%);
+                    color: $text-selected;
+                }
+
+                &.current {
+                    background-color: lighten(rgba(216, 204, 121, 0.05), 50%);
+                    color: lighten($text-selected, 20%);
+                }
+
+                label {
+                    right: 5px;
+                }
+            }
+        }
+
+        .chat {
+            width: 100%;
+            height: 100%;
+            padding-top: 35px;
+
+            .inner {
+                width: 100%;
+                height: 100%;
+                flex-direction: column;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+            }
+
+            .messages {
+                width: 100%;
+                height: 0%;
+                flex-grow: 1;
+            }
+
+            .input-container {
+                width: 100%;
+                min-height: 45px;
+                border-top: 1px $light-border;
+                background-color: darken($dark-background, 35%);
+                flex-direction: column;
+
+                TextInput {
+                    width: 100%;
+                    min-height: 32px;
+                    font-size: 18px;
+                    flex-grow: 1;
+                    background-color: transparent;
+                    border: none;
+                    padding: 0px;
+                    padding-bottom: 15px;
+                    padding-right: 5px;
+                    align-items: flex-start;
+                    box-shadow: none;
+
+                    .ghost {
+                        left: 5px;
+                        top: 5px;
+                    }
+
+                    label {
+                        right: 5px;
+                        bottom: 5px;
+                        word-break: break-all;
+                    }
+                }
+            }
+
+            .buttons {
+                bottom: 5px;
+                width: 100%;
+                height: 32px;
+                justify-content: flex-end;
+
+                .chars {
+                    position: absolute;
+                    left: 5px;
+                    bottom: 0px;
+                    color: rgba(white, 0.5);
+                }
+
+                .max {
+                    color: rgba(red, 0.5);
+                }
+
+                .button {
+                    margin-right: 5px;
+                    width: 32px;
+                    aspect-ratio: 1;
+                    background-size: 100%;
+                    background-position: center;
+                    background-repeat: no-repeat;
+                    transition: transform 0.2s linear;
+                    image-rendering: point;
+
+                    &:hover {
+                        transform: scale(1.2);
+                    }
+                }
+            }
+        }
+    }
+
+    .camera {
+        height: 100%;
+        justify-content: center;
+        align-content: center;
+        padding: 20px;
+        flex-grow: 1;
+
+        .output {
+            width: 100%;
+            height: 100%;
+            background-size: 100%;
+            background-repeat: no-repeat;
+            background-position: center;
+            border: 1px $light-border;
+            box-shadow: 10px 10px 0px rgba(black, 0.5);
+        }
+
+        .overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+
+            &.nightmode {
+                backdrop-filter: grayscale(1);
+            }
+        }
+
+        .text {
+            position: absolute;
+            padding: 10px;
+            background-color: rgba(black, 0.85);
+            font-size: 32px;
+        }
+
+        .flicker {
+            animation-name: flicker;
+            animation-duration: 1s;
+            animation-timing-function: ease-in-out;
+            width: 32px;
+            aspect-ratio: 1;
+            margin-right: 15px;
+            background-image: url(ui/ui_circle.png);
+            background-image-tint: rgba(200, 20, 20, 1);
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: 100%;
+            image-rendering: point;
+        }
+    }
+
+    cursor: none;
+
+    .cursor {
+        position: absolute;
+        width: 24px;
+        aspect-ratio: 1;
+        background-image: url(ui/ui_cursor.png);
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: 100%;
+        pointer-events: none;
+        image-rendering: point;
+        z-index: 99;
+    }
+
+    .darken {
+        position: absolute;
+        z-index: 2;
+        top: 0px;
+        left: 0px;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        transition: background-color 0.2s ease-in-out;
+        background-color: rgba(black, 0);
+
+        &.active {
+            background-color: rgba(black, 0.75);
+            pointer-events: all;
+        }
+    }
+
+    &.disabled {
+        opacity: 0;
+    }
+}

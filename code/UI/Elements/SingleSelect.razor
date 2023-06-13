@@ -1,0 +1,151 @@
+﻿@using Sandbox;
+@using Sandbox.UI;
+
+@namespace TestGame
+@inherits Panel
+
+<style>
+	$dark-background: rgba(23, 27, 31, 1);
+	$light-border: rgba(50, 50, 50, 1);
+	$text-selected: rgba(216, 204, 121, 1);
+
+	SingleSelect {
+		border: 2px $light-border;
+		background-color: darken($dark-background, 80%);
+		font-size: 20px;
+		align-items: center;
+		padding: 5px;
+		font-family: 'Retro-Gaming';
+		text-shadow: 3px 3px 0px black;
+		color: white;
+		box-shadow: 0px 4px 0px rgba(black, 0.5);
+
+		.value {
+			pointer-events: none;
+		}
+
+		.arrow {
+			position: absolute;
+			right: 10px;
+			width: 24px;
+			height: 18px;
+			aspect-ratio: 1;
+			background-size: 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            image-rendering: point;
+			background-image: url(ui/ui_arrowdown.png);
+			background-image-tint: rgba(white, 0.2);
+			pointer-events: none;
+
+			&.active {
+				background-image-tint: rgba(white, 1);
+			}
+		}
+
+		&.active {
+			border: 2px lighten($light-border, 20%);
+			background-color: darken($dark-background, 40%);
+		}
+
+		Collapse {
+			position: absolute;
+			top: 100%;
+			left: 0px;
+			width: 100%;
+			border: 2px lighten($light-border, 20%);
+			background-color: darken($dark-background, 40%);
+			flex-direction: column;
+			flex-wrap: wrap;
+			z-index: 10;
+			margin: -3px;
+			margin-top: -5px;
+			box-shadow: 0px 4px 0px rgba(black, 0.5);
+
+			.option {
+				height: 34px;
+				width: 100%;
+				color: rgba(255, 255, 255, 0.5);
+				padding-top: 4px;
+
+				&:hover {
+					background-color: darken($dark-background, 0%);
+					color: white;
+				}
+
+				.text {
+					pointer-events: none;
+					left: 5px;
+				}
+			}
+		}
+	}
+</style>
+
+<root class="@(Collapsed?.Select == this ? "active" : "")">
+	<panel class="arrow @(Collapsed?.Select == this ? "active" : "")" />
+
+	@{
+		var option = Options?.ElementAtOrDefault( Current );
+		if ( !string.IsNullOrEmpty( option ) )
+		{
+			<label class="value">@option</label>
+		}
+	}
+</root>
+
+@code {
+	/// <summary>
+	/// The current SingleSelect collapse.
+	/// </summary>
+	public static Collapse Collapsed { get; set; }
+
+	public class Collapse : Panel
+	{
+		public SingleSelect Select { get; private set; }
+
+		public Collapse( SingleSelect select )
+		{
+			Collapsed?.Delete();
+			Collapsed = this;
+			Select = select;
+
+			foreach ( var option in select.Options.Where( o => o != select.Options[select.Current] ) )
+			{
+				var pnl = AddChild<Panel>( "option" );
+				pnl.AddEventListener( "onclick", () =>
+				{
+					select.Current = select.Options.IndexOf( option );
+					Delete( true );
+					Collapsed = null;
+				} );
+
+				var lbl = pnl.AddChild<Label>( "text" );
+				lbl.Text = option;
+			}
+		}
+	}
+
+	/// <summary>
+	/// Current selection of this OptionSelect.
+	/// </summary>
+	public int Current { get; set; }
+
+	/// <summary>
+	/// List of the options of this OptionSelect.
+	/// </summary>
+	public List<string> Options { get; set; }
+
+	protected override void OnClick( MousePanelEvent e )
+	{
+		if ( e.Button == "mouseleft" && ((!Collapsed?.IsValid ?? false) || Collapsed?.Select != this) )
+			AddChild( new Collapse( this ) );
+
+		base.OnClick( e );
+	}
+
+	protected override int BuildHash()
+	{
+		return HashCode.Combine( Current, HasHovered, Collapsed );
+	}
+}
