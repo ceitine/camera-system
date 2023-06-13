@@ -1,8 +1,8 @@
 {
-  "Title": "TestGame",
+  "Title": "Camera System",
   "Type": "game",
   "Org": "local",
-  "Ident": "testgame",
+  "Ident": "camera-system",
   "Tags": null,
   "Schema": 1,
   "HasAssets": true,

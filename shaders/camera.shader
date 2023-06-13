@@ -58,20 +58,6 @@ PS
         return screen.rgb + sin( (coord.y / scale - (g_flTime * spd * 6.28)) ) * amt;
     }
 
-    float3 channelSplit( Texture2D tex, float2 coord )
-    {
-        const float spread = 0.002;
-
-        float time = g_flTime * 4;
-
-        float3 color;
-        color.r = Tex2DS( tex, Sampler, float2( coord.x - spread * sin( time ), coord.y ) ).r;
-        color.g = Tex2DS( tex, Sampler, float2( coord.x, coord.y ) ).g;
-        color.b = Tex2DS( tex, Sampler, float2( coord.x + spread * sin( time ), coord.y ) ).b;
-
-        return color;
-    }
-
     float2 curve( float2 uv ) 
     {
         const float curvature = 7;
